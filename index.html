@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Monster Slayer</title>
+    <script src="https://npmcdn.com/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="css/foundation.min.css">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+    <div id="app">
+        <section class="row">
+            <div class="small-6 columns character">
+                <div class = "hero"></div>
+                <div class="healthbar">
+                    <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" :style="[{width:heroHP + '%'}, heroHPColor]">
+                        {{heroHP}}
+                    </div>
+                </div>
+            </div>
+            <div class="small-6 columns character">
+                <div class = "monster"></div>
+                <div class="healthbar">
+                    <div class="healthbar text-center" style="background-color: green; margin: 0; color: white;" :style="[{width:monsterHP + '%'}, monsterHPColor]">
+                        {{monsterHP}}
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="row controls" v-if="!start">
+            <div class="small-12 columns">
+                <button id="start-game" @click="startGame">START NEW GAME</button>
+            </div>
+        </section>
+        <section class="row controls" v-else>
+            <div class="small-12 columns">
+                <button id="attack" @click="attackMonster">ATTACK</button>
+                <button id="special-attack" @click="specialAttack">SPECIAL ATTACK</button>
+                <button id="heal" @click="heal">HEAL</button>
+                <button id="give-up" @click="restart">GIVE UP</button>
+            </div>
+        </section>
+        <section class="row log">
+            <div class="small-12 columns">
+                <ul>
+                    <template v-for="round in fightLog">
+                            <li v-if="round.heal" :class = "'player-heal'">You healed yourself {{round.heroDamage}} Points! </li>
+                            <li v-else :class = "'player-turn'">You did {{round.heroDamage}} Points damage to monster!</li>
+                            <li :class = "'monster-turn'">Monster did {{round.monsterDamage}} Points to you!</li>
+                    </template>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                start: false,
+                heroHP: 100,
+                monsterHP: 100,
+                fightLog:[],
+            },
+            computed:{
+                monsterHPColor:function(){
+                    if(this.monsterHP > 30 && this.monsterHP < 70){
+                        return {background:"orange"}
+                    } else if (this.monsterHP > 70) {
+                        return {background:"green"}
+                    } else {
+                        return {background:"red"}
+                    }
+                },
+                heroHPColor:function(){
+                    if(this.heroHP > 30 && this.heroHP < 70){
+                        return {background:"orange"}
+                    } else if (this.heroHP >= 70) {
+                        return {background:"green"}
+                    } else {
+                        return {background:"red"}
+                    }
+                }
+            },
+
+            methods: {
+                startGame: function () {
+                    app.start = true;
+                    app.heroHP = 100;
+                    app.monsterHP = 100;
+                    app.fightLog = [];
+                },
+                restart: function () {
+                    let restartConfirm = window.confirm('Are you sure to give up?');
+                    if (restartConfirm) {
+                        app.start = false;
+                    } else {
+                        app.start = true;
+                    }
+                },
+                attackMonster: function () {
+                    let heroAttack = this.attackDamage();
+                    let monsterAttack = this.attackDamage();
+                    this.fightRecord(heroAttack,monsterAttack, false)
+                    // console.log(heroAttack, monsterAttack)
+                    if (app.heroHP - monsterAttack > 0) {
+                        app.heroHP -= monsterAttack;
+                    } else {
+                        app.heroHP = 0;
+                    };
+                    if (app.monsterHP - heroAttack > 0) {
+                        app.monsterHP -= heroAttack;
+                    } else {
+                        app.monsterHP = 0;
+                    };
+                    this.checkGame();
+                },
+                specialAttack: function () {
+                    let specialAttack = this.attackDamage() * 2;
+                    let monsterAttack = this.attackDamage() * 2;
+                    // console.log('s', specialAttack, monsterAttack)
+                    this.fightRecord(specialAttack,monsterAttack, false)
+                    if (app.heroHP - monsterAttack > 0) {
+                        app.heroHP -= monsterAttack;
+                    } else {
+                        app.heroHP = 0;
+                    };
+                    if (app.monsterHP - specialAttack > 0) {
+                        app.monsterHP -= specialAttack;
+                    } else {
+                        app.monsterHP = 0;
+                    };
+                    this.checkGame();
+                },
+                attackDamage: function () {
+                    let attackPoint = Math.floor(Math.random() * 10 + 1);
+                    return attackPoint;
+                },
+                heal:function() {
+                    let healPoint = Math.floor(Math.random() * 5 + 5);
+                    let monsterAttack = this.attackDamage();
+                    this.fightRecord(healPoint,monsterAttack, true)
+                    // console.log('h',healPoint, monsterAttack);
+                    if (app.heroHP + healPoint > 100) {
+                        app.heroHP = 100;
+                    } else {
+                        app.heroHP += healPoint
+                    }
+                    if (app.heroHP - monsterAttack > 0) {
+                        app.heroHP -= monsterAttack;
+                    } else {
+                        app.heroHP = 0;
+                    };
+                    this.checkGame();
+                },
+
+                checkGame: function () {
+                    if (app.heroHP === 0 && app.monsterHP === 0) {
+                        window.alert('Draw....');
+                        app.resetGame();
+                    } else if (app.monsterHP === 0) {
+                        window.alert('You Win!!');
+                        app.resetGame();
+                    } else if (app.heroHP === 0) {
+                        window.alert('You Lose.....');
+                        app.resetGame();
+                    } else {
+                        return
+                    }
+                },
+                resetGame: function () {
+                    let resetConfirm = window.confirm('Do you want to reset the game?');
+                    if (resetConfirm) {
+                        this.startGame();
+                    } else {
+                        app.start = false;
+                    }
+                },
+                fightRecord:function(heroPoint,monsterPoint, heal){
+                    this.fightLog.unshift({
+                        heroDamage:heroPoint,
+                        monsterDamage:monsterPoint,
+                        heal:heal,
+                    });
+                }
+            }
+        })
+
+    </script>
+
+</body>
+
+</html>
